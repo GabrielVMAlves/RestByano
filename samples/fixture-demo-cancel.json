@@ -1,0 +1,89 @@
+{
+    "schemaVersion":  1,
+    "kind":  "collection",
+    "definition":  {
+                       "id":  "5a3e0000-0000-4000-8000-000000000058",
+                       "name":  "restByAno fixture - cancellation demo",
+                       "schemaVersion":  1,
+                       "defaults":  [
+
+                                    ],
+                       "folders":  [
+
+                                   ],
+                       "requests":  [
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000051",
+                                            "order":  0,
+                                            "name":  "Quick request",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000050",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000053",
+                                            "order":  1,
+                                            "name":  "Slow request (press Stop while this runs)",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/delay?ms=15000",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000052",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000055",
+                                            "order":  2,
+                                            "name":  "Never reached after Stop",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000054",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000057",
+                                            "order":  0,
+                                            "name":  "Cleanup (skipped after a cancellation)",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  true,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000056",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        }
+                                    ]
+                   }
+}

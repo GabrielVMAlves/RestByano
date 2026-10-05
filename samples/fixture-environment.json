@@ -1,0 +1,30 @@
+{
+    "schemaVersion":  1,
+    "kind":  "environment",
+    "definition":  {
+                       "id":  "5a3e0000-0000-4000-8000-000000000059",
+                       "name":  "Fixture API (local)",
+                       "variables":  [
+                                         {
+                                             "name":  "baseUrl",
+                                             "value":  "http://127.0.0.1:5000"
+                                         },
+                                         {
+                                             "name":  "basicUser",
+                                             "value":  "fixture-user"
+                                         },
+                                         {
+                                             "name":  "bearerToken",
+                                             "requiresSecret":  true
+                                         },
+                                         {
+                                             "name":  "apiKey",
+                                             "requiresSecret":  true
+                                         },
+                                         {
+                                             "name":  "basicPassword",
+                                             "requiresSecret":  true
+                                         }
+                                     ]
+                   }
+}

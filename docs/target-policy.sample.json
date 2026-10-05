@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "allowedTargets": [
+    { "scheme": "https", "host": "api.company.example", "port": 443 },
+    { "scheme": "http", "host": "127.0.0.1", "port": 5000 }
+  ]
+}

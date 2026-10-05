@@ -1,0 +1,107 @@
+<UserControl x:Class="restByAno.Desktop.Views.RunnerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:restByAno.Desktop.ViewModels">
+    <UserControl.Resources>
+        <Style x:Key="RunTone" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StatusTone.Success}">
+                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StatusTone.Warning}">
+                    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StatusTone.Error}">
+                    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:StatusTone.Info}">
+                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource PanelBrush}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource LineBrush}"
+                    BorderThickness="0,0,0,1" Padding="12,6">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Runner" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock x:Name="RunnerGlyph" Text="{Binding StatusGlyph}" Margin="14,0,5,0" VerticalAlignment="Center"
+                                   Style="{StaticResource RunTone}" />
+                        <TextBlock x:Name="RunnerStatus" Text="{Binding StatusText}" VerticalAlignment="Center" FontWeight="SemiBold"
+                                   Style="{StaticResource RunTone}" />
+                        <TextBlock x:Name="RunnerSummary" Text="{Binding SummaryText}" Margin="14,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" TextTrimming="CharacterEllipsis" MaxWidth="620" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <CheckBox Content="Stop on first failure" IsChecked="{Binding StopOnFailure}" VerticalAlignment="Center"
+                                  Margin="0,0,12,0" AutomationProperties.Name="Stop on first failure"
+                                  ToolTip="When checked, remaining regular requests are skipped after a failure; cleanup still runs" />
+                        <Button Content="▶ Run collection" Command="{Binding RunCommand}" Margin="0,0,6,0"
+                                Style="{StaticResource AccentButton}" AutomationProperties.Name="Run collection"
+                                ToolTip="Run the selected collection with the active environment" />
+                        <Button Content="■ Stop" Command="{Binding StopCommand}" AutomationProperties.Name="Stop run"
+                                ToolTip="Cancel the run; cleanup is not sent after a cancellation" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+                <ListBox ItemsSource="{Binding Steps}" AutomationProperties.Name="Run steps" HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22" />
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="170" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Glyph}" Style="{StaticResource RunTone}" FontWeight="Bold" />
+                                <TextBlock Grid.Column="1" Text="{Binding Sequence}" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                <TextBlock Grid.Column="2" Text="{Binding Name}" MinWidth="200" MaxWidth="360" TextTrimming="CharacterEllipsis" Margin="0,0,10,0">
+                                    <TextBlock.ToolTip>
+                                        <TextBlock Text="{Binding Name}" />
+                                    </TextBlock.ToolTip>
+                                </TextBlock>
+                                <TextBlock Grid.Column="3" Text="{Binding OutcomeText}" Style="{StaticResource RunTone}" FontWeight="SemiBold" />
+                                <TextBlock Grid.Column="4" Margin="0,0,10,0" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           Text="{Binding KindLabel}" Foreground="{DynamicResource SecondaryTextBrush}" />
+                                <TextBlock Grid.Column="5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SecondaryTextBrush}">
+                                    <Run Text="{Binding Detail, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Message, Mode=OneWay}" />
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Text="Select a collection, then Run collection. Steps appear here." Margin="14,12" VerticalAlignment="Top"
+                           Foreground="{DynamicResource SecondaryTextBrush}" IsHitTestVisible="False">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Steps.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

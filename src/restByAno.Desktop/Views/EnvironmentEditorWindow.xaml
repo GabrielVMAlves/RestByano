@@ -1,0 +1,71 @@
+<Window x:Class="restByAno.Desktop.Views.EnvironmentEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="clr-namespace:restByAno.Desktop.Views"
+        Title="restByAno — Environments" Width="860" Height="560" MinWidth="640" MinHeight="420"
+        ShowInTaskbar="False" Style="{StaticResource AppWindowStyle}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Border Background="{DynamicResource RaisedBrush}" BorderBrush="{DynamicResource LineBrush}"
+                        BorderThickness="0,0,0,1" Padding="12,9">
+                    <TextBlock Text="Environments" FontWeight="SemiBold" />
+                </Border>
+                <WrapPanel Grid.Row="1" Margin="6,6,6,2">
+                    <Button Content="＋ New" Command="{Binding NewEnvironmentCommand}" Style="{StaticResource CompactButton}"
+                            AutomationProperties.Name="New environment" />
+                    <Button Content="Rename" Command="{Binding RenameCommand}" Style="{StaticResource CompactButton}"
+                            AutomationProperties.Name="Rename environment" />
+                    <Button Content="Delete" Command="{Binding DeleteCommand}" Style="{StaticResource CompactButton}"
+                            AutomationProperties.Name="Delete environment" />
+                    <Button Content="Import…" Command="{Binding ImportCommand}" Style="{StaticResource CompactButton}"
+                            AutomationProperties.Name="Import environment" ToolTip="Import an environment file (secrets are never imported)" />
+                    <Button Content="Export…" Command="{Binding ExportCommand}" Style="{StaticResource CompactButton}"
+                            AutomationProperties.Name="Export environment" ToolTip="Export the selected environment (secret values are never exported)" />
+                </WrapPanel>
+                <ListBox x:Name="EnvironmentList" Grid.Row="2" ItemsSource="{Binding Environments}"
+                         SelectedItem="{Binding Selected, Mode=OneWay}" SelectionChanged="OnEnvironmentSelectionChanged"
+                         DisplayMemberPath="Name" AutomationProperties.Name="Environments">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="{Binding SelectedName}" FontSize="17" FontWeight="SemiBold" x:Name="EnvironmentNameText" />
+                <TextBlock Text="{Binding StateText}" Margin="14,0,0,0" VerticalAlignment="Center"
+                           Foreground="{DynamicResource SecondaryTextBrush}" x:Name="EnvironmentStateText" />
+            </StackPanel>
+            <views:VariablesGridView Grid.Row="1" DataContext="{Binding Variables}" />
+            <TextBlock Grid.Row="2" Text="{Binding ValidationText}" TextWrapping="Wrap" Margin="0,8,0,0"
+                       Foreground="{DynamicResource ErrorBrush}" x:Name="EnvironmentValidationText" />
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Content="Save" Command="{Binding SaveCommand}" Style="{StaticResource AccentButton}"
+                        AutomationProperties.Name="Save environment" />
+                <Button Content="Close" Margin="8,0,0,0" IsCancel="True" Click="OnCloseClicked"
+                        AutomationProperties.Name="Close environments" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

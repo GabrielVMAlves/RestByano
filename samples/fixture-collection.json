@@ -1,0 +1,335 @@
+{
+    "schemaVersion":  1,
+    "kind":  "collection",
+    "definition":  {
+                       "id":  "5a3e0000-0000-4000-8000-000000000039",
+                       "name":  "restByAno fixture - customer lifecycle and checks",
+                       "schemaVersion":  1,
+                       "defaults":  [
+                                        {
+                                            "name":  "customerName",
+                                            "value":  "Ada"
+                                        }
+                                    ],
+                       "folders":  [
+                                       {
+                                           "id":  "5a3e0000-0000-4000-8000-000000000001",
+                                           "name":  "Customer lifecycle",
+                                           "order":  0
+                                       },
+                                       {
+                                           "id":  "5a3e0000-0000-4000-8000-000000000002",
+                                           "name":  "Authentication (dummy credentials)",
+                                           "order":  1
+                                       },
+                                       {
+                                           "id":  "5a3e0000-0000-4000-8000-000000000003",
+                                           "name":  "Response checks",
+                                           "order":  2
+                                       }
+                                   ],
+                       "requests":  [
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000006",
+                                            "order":  0,
+                                            "name":  "Health",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000001",
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000004",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000005",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/ok",
+                                                                   "expectedJson":  "true"
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000011",
+                                            "order":  1,
+                                            "name":  "Create customer",
+                                            "method":  "Post",
+                                            "urlTemplate":  "{{baseUrl}}/customers",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000001",
+                                            "body":  {
+                                                         "kind":  "Json",
+                                                         "content":  "{\"name\":\"{{customerName}}\"}"
+                                                     },
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000007",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  201
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000008",
+                                                                   "kind":  "JsonExists",
+                                                                   "jsonPointer":  "/id"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000009",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/name",
+                                                                   "expectedJson":  "\"Ada\""
+                                                               }
+                                                           ],
+                                            "extractors":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000010",
+                                                                   "jsonPointer":  "/id",
+                                                                   "variableName":  "customerId",
+                                                                   "sensitive":  true
+                                                               }
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000014",
+                                            "order":  2,
+                                            "name":  "Read customer",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/customers/{{customerId}}",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000001",
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000012",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000013",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/name",
+                                                                   "expectedJson":  "\"Ada\""
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000016",
+                                            "order":  0,
+                                            "name":  "Delete customer (cleanup)",
+                                            "method":  "Delete",
+                                            "urlTemplate":  "{{baseUrl}}/customers/{{customerId}}",
+                                            "isCleanup":  true,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000001",
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000015",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  204
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000019",
+                                            "order":  0,
+                                            "name":  "Bearer token",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/protected/bearer",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000002",
+                                            "auth":  {
+                                                         "kind":  "Bearer",
+                                                         "tokenVariable":  "bearerToken"
+                                                     },
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000017",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000018",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/scheme",
+                                                                   "expectedJson":  "\"bearer\""
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000021",
+                                            "order":  1,
+                                            "name":  "API key in a header",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/protected/key",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000002",
+                                            "auth":  {
+                                                         "kind":  "ApiKey",
+                                                         "apiKeyName":  "X-API-Key",
+                                                         "apiKeyVariable":  "apiKey",
+                                                         "apiKeyLocation":  "Header"
+                                                     },
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000020",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000023",
+                                            "order":  2,
+                                            "name":  "API key in the query",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/protected/key",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000002",
+                                            "auth":  {
+                                                         "kind":  "ApiKey",
+                                                         "apiKeyName":  "api_key",
+                                                         "apiKeyVariable":  "apiKey",
+                                                         "apiKeyLocation":  "Query"
+                                                     },
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000022",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000025",
+                                            "order":  3,
+                                            "name":  "Basic authentication",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/protected/basic",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000002",
+                                            "auth":  {
+                                                         "kind":  "Basic",
+                                                         "usernameVariable":  "basicUser",
+                                                         "passwordVariable":  "basicPassword"
+                                                     },
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000024",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000036",
+                                            "order":  0,
+                                            "name":  "JSON types and paths",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/json",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000003",
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000026",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000027",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/id",
+                                                                   "expectedJson":  "42"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000028",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/active",
+                                                                   "expectedJson":  "true"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000029",
+                                                                   "kind":  "JsonExists",
+                                                                   "jsonPointer":  "/missing"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000030",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/missing",
+                                                                   "expectedJson":  "null"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000031",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/price",
+                                                                   "expectedJson":  "1.5"
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000032",
+                                                                   "kind":  "JsonEquals",
+                                                                   "jsonPointer":  "/a~1b/c~0d",
+                                                                   "expectedJson":  "\"deep\""
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000033",
+                                                                   "kind":  "HeaderEquals",
+                                                                   "headerName":  "content-type",
+                                                                   "expectedJson":  "\"application/json\""
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000034",
+                                                                   "kind":  "HeaderEquals",
+                                                                   "headerName":  "X-Multi",
+                                                                   "expectedJson":  "\"c\""
+                                                               },
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000035",
+                                                                   "kind":  "DurationBelow",
+                                                                   "maxMilliseconds":  5000
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000038",
+                                            "order":  1,
+                                            "name":  "A 404 is a valid response",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/status/404",
+                                            "isCleanup":  false,
+                                            "folderId":  "5a3e0000-0000-4000-8000-000000000003",
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000037",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  404
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        }
+                                    ]
+                   }
+}

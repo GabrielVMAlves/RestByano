@@ -1,0 +1,15 @@
+bin/
+obj/
+publish/
+.vs/
+*.user
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+restByAno-backups/
+*.settings.json
+!samples/*.json
+*.secret
+*.secrets.json
+.env

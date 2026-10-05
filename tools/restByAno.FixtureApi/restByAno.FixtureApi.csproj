@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>restByAno.FixtureApi</AssemblyName>
+    <RootNamespace>restByAno.FixtureApi</RootNamespace>
+    <!-- Development tool only. Never referenced by, or published with, the desktop app. -->
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+</Project>

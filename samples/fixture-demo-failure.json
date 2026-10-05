@@ -1,0 +1,89 @@
+{
+    "schemaVersion":  1,
+    "kind":  "collection",
+    "definition":  {
+                       "id":  "5a3e0000-0000-4000-8000-000000000049",
+                       "name":  "restByAno fixture - intentional failure demo",
+                       "schemaVersion":  1,
+                       "defaults":  [
+
+                                    ],
+                       "folders":  [
+
+                                   ],
+                       "requests":  [
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000042",
+                                            "order":  0,
+                                            "name":  "Passes",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000041",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000044",
+                                            "order":  1,
+                                            "name":  "Intentional assertion failure (expects 201)",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000043",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  201
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000046",
+                                            "order":  2,
+                                            "name":  "Skipped after the failure (stop on first failure)",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  false,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000045",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        },
+                                        {
+                                            "id":  "5a3e0000-0000-4000-8000-000000000048",
+                                            "order":  0,
+                                            "name":  "Cleanup always runs",
+                                            "method":  "Get",
+                                            "urlTemplate":  "{{baseUrl}}/health",
+                                            "isCleanup":  true,
+                                            "assertions":  [
+                                                               {
+                                                                   "id":  "5a3e0000-0000-4000-8000-000000000047",
+                                                                   "kind":  "StatusEquals",
+                                                                   "expectedStatus":  200
+                                                               }
+                                                           ],
+                                            "extractors":  [
+
+                                                           ]
+                                        }
+                                    ]
+                   }
+}
