@@ -9,7 +9,7 @@ namespace restByAno.Infrastructure.Policy;
 
 public enum PolicyMode
 {
-    /// <summary>No policy file: only loopback destinations are allowed.</summary>
+    /// <summary>No policy file: destinations are not restricted by an allow-list.</summary>
     NotInstalled,
 
     /// <summary>A valid policy is installed: only listed destinations are allowed (loopback must be listed too).</summary>
@@ -37,10 +37,47 @@ public sealed partial class ManagedTargetPolicy : ITargetPolicy
     private (DateTime LastWrite, long Length)? _cacheKey;
     private PolicyStatus? _cache;
 
+    public const string DefaultFileName = "target-policy.json";
+
     public ManagedTargetPolicy(string? path = null)
     {
-        _path = path ?? System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "restByAno", "target-policy.json");
+        _path = path ?? System.IO.Path.Combine(Configuration.StorageOptions.DefaultDataDirectory, DefaultFileName);
+    }
+
+    /// <summary>Parses <c>--target-policy &lt;path&gt;</c> or <c>--target-policy=&lt;path&gt;</c>; defaults to the default data folder (C:	emp).</summary>
+    public static bool TryParsePath(IReadOnlyList<string> args, out string path, out string? error)
+    {
+        path = System.IO.Path.Combine(Configuration.StorageOptions.DefaultDataDirectory, DefaultFileName);
+        error = null;
+        for (var i = 0; i < args.Count; i++)
+        {
+            string value;
+            if (args[i].Equals("--target-policy", StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 >= args.Count)
+                {
+                    error = "--target-policy needs a value: a path to the policy file.";
+                    return false;
+                }
+
+                value = args[++i];
+            }
+            else if (args[i].StartsWith("--target-policy=", StringComparison.OrdinalIgnoreCase))
+                value = args[i]["--target-policy=".Length..];
+            else
+                continue;
+
+            value = value.Trim().Trim('"');
+            if (value.Length == 0 || value.IndexOfAny(System.IO.Path.GetInvalidPathChars()) >= 0)
+            {
+                error = $"--target-policy must be a file path, but was '{value}'.";
+                return false;
+            }
+
+            path = System.IO.Path.GetFullPath(value, Configuration.StorageOptions.DefaultDataDirectory);
+        }
+
+        return true;
     }
 
     public string PolicyPath => _path;
@@ -66,22 +103,16 @@ public sealed partial class ManagedTargetPolicy : ITargetPolicy
                 return TargetPolicyResult.Deny(
                     $"The managed target policy cannot be used, so all destinations are blocked: {status.Message} An administrator must fix '{status.Path}'.");
 
-            case PolicyMode.NotInstalled:
-                return loopback
-                    ? TargetPolicyResult.Allow
-                    : TargetPolicyResult.Deny(
-                        $"No managed target policy is installed on this device, so only loopback addresses can be used. To reach '{host}' an administrator must deploy a target policy (see the user guide).");
         }
 
         var scheme = target.Scheme;
         var port = target.Port; // effective port: Uri fills in 80/443
-        var match = status.Targets.Any(t => t.Scheme == scheme && t.Host == host && t.Port == port);
-        if (!match)
+        if (status.Mode == PolicyMode.Active && !status.Targets.Any(t => t.Scheme == scheme && t.Host == host && t.Port == port))
             return TargetPolicyResult.Deny($"“{scheme}://{host}:{port}” is not in the managed allow-list.");
 
         if (scheme == Uri.UriSchemeHttp && !loopback && !transport.AllowNonLoopbackHttp)
             return TargetPolicyResult.Deny(
-                $"“{host}” is allowed by the managed policy, but plain HTTP to a non-loopback host also requires “Allow non-loopback HTTP” in the transport settings of the active environment.");
+                $"“{host}” is allowed, but plain HTTP to a non-loopback host also requires “Allow non-loopback HTTP” in the transport settings of the active environment.");
 
         return TargetPolicyResult.Allow;
     }
@@ -98,7 +129,7 @@ public sealed partial class ManagedTargetPolicy : ITargetPolicy
                     _cacheKey = null;
                     _cache = null;
                     return new PolicyStatus(PolicyMode.NotInstalled, _path,
-                        "No managed target policy is installed; only loopback destinations are allowed.", []);
+                        "No target policy file; destinations are not restricted.", []);
                 }
 
                 var info = new FileInfo(_path);

@@ -39,6 +39,13 @@ public partial class App : Application
             return;
         }
 
+        if (!ManagedTargetPolicy.TryParsePath(e.Args, out var policyPath, out var policyError))
+        {
+            dialogs.ShowMessage("restByAno cannot start", policyError!);
+            Shutdown(2);
+            return;
+        }
+
         // One instance per canonical data directory, held for the lifetime of the app.
         _instanceGuard = SingleInstanceGuard.TryAcquire(options!);
         if (_instanceGuard is null)
@@ -53,7 +60,7 @@ public partial class App : Application
 
         // Composition root: the only place services are wired and resolved.
         var collection = new ServiceCollection();
-        ConfigureServices(collection, options!, theme, dialogs);
+        ConfigureServices(collection, options!, policyPath, theme, dialogs);
         _services = collection.BuildServiceProvider();
 
         var settings = _services.GetRequiredService<StartupCoordinator>().Run();
@@ -78,7 +85,7 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    private static void ConfigureServices(IServiceCollection services, StorageOptions options, ThemeService theme, IDialogService dialogs)
+    private static void ConfigureServices(IServiceCollection services, StorageOptions options, string policyPath, ThemeService theme, IDialogService dialogs)
     {
         services.AddSingleton(theme);
         services.AddSingleton(dialogs);
@@ -97,8 +104,8 @@ public partial class App : Application
         services.AddSingleton<IWindowLauncher, WindowLauncher>();
         services.AddSingleton(sp => new VariableSnapshotFactory(sp.GetService<ISecretStore>()));
 
-        // Destination allow-list: managed policy file, or loopback only when none is installed.
-        services.AddSingleton<ManagedTargetPolicy>();
+        // Destination allow-list: optional policy file (--target-policy, default C:	emp	arget-policy.json); no file means no restriction.
+        services.AddSingleton(new ManagedTargetPolicy(policyPath));
         services.AddSingleton<ITargetPolicy>(sp => sp.GetRequiredService<ManagedTargetPolicy>());
         services.AddSingleton<HttpClientPool>();
         services.AddSingleton<IRequestExecutor, HttpRequestExecutor>();

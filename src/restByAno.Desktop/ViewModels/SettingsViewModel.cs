@@ -47,7 +47,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             PolicyMode.Active => $"Managed target policy active: {status.Targets.Count} allowed target(s).",
             PolicyMode.Invalid => $"Managed target policy is INVALID — all destinations are blocked. {status.Message}",
-            _ => "No managed target policy is installed. Only loopback destinations (127.0.0.1, ::1, localhost) can be used; other hosts need a policy deployed by an administrator.",
+            _ => "No target policy file found; destinations are not restricted. To restrict them, place a target-policy.json in C:\temp or start with --target-policy <path>.",
         };
         PolicyTargets = status.Targets.Select(t => $"{t.Scheme}://{t.Host}:{t.Port}").ToList();
     }
