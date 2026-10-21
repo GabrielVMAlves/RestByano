@@ -11,7 +11,7 @@ using restByAno.Infrastructure.Policy;
 namespace restByAno.Desktop.ViewModels;
 
 /// <summary>
-/// Global limits (timeout, response size cap, history retention) and the transport profile of the active environment
+/// Global limits (timeout, history retention) and the transport profile of the active environment
 /// (proxy mode/address and the non-loopback-HTTP switch). Changes affect future sends only. The managed target policy is
 /// shown read-only: restByAno never writes it.
 /// </summary>
@@ -38,7 +38,6 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         var current = settings.Current;
         _timeoutSeconds = current.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
-        _responseLimitKiB = (current.ResponseLimitBytes / 1024).ToString(CultureInfo.InvariantCulture);
         _retentionDays = current.RetentionDays.ToString(CultureInfo.InvariantCulture);
 
         var status = policy.GetStatus();
@@ -70,9 +69,6 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _timeoutSeconds;
-
-    [ObservableProperty]
-    private string _responseLimitKiB;
 
     [ObservableProperty]
     private string _retentionDays;
@@ -122,19 +118,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         var errors = new List<string>();
 
         var timeout = ParseInt(TimeoutSeconds, "Timeout", errors);
-        var limitKiB = ParseInt(ResponseLimitKiB, "Response size limit", errors);
         var retention = ParseInt(RetentionDays, "History retention", errors);
 
         var candidate = new AppSettings
         {
             TimeoutSeconds = timeout ?? 0,
-            ResponseLimitBytes = limitKiB is { } kib ? (int)Math.Min((long)kib * 1024, int.MaxValue) : 0,
             RetentionDays = retention ?? 0,
         };
         if (timeout is not null && candidate.TimeoutSeconds is < AppSettings.MinTimeoutSeconds or > AppSettings.MaxTimeoutSeconds)
             errors.Add($"Timeout must be between {AppSettings.MinTimeoutSeconds} and {AppSettings.MaxTimeoutSeconds} seconds.");
-        if (limitKiB is not null && (limitKiB < 1 || limitKiB > AppSettings.MaxResponseBytes / 1024))
-            errors.Add($"Response size limit must be between 1 KiB and {AppSettings.MaxResponseBytes / 1024:N0} KiB (100 MiB).");
         if (retention is not null && candidate.RetentionDays is < AppSettings.MinRetentionDays or > AppSettings.MaxRetentionDays)
             errors.Add($"History retention must be between {AppSettings.MinRetentionDays} and {AppSettings.MaxRetentionDays} days.");
 
@@ -153,7 +145,6 @@ public sealed partial class SettingsViewModel : ObservableObject
             _settings.Update(s => s with
             {
                 TimeoutSeconds = candidate.TimeoutSeconds,
-                ResponseLimitBytes = candidate.ResponseLimitBytes,
                 RetentionDays = candidate.RetentionDays,
             });
 

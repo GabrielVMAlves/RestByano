@@ -30,8 +30,21 @@ public sealed record ResponseSnapshot
     /// <summary>Response headers followed by content headers, in received order.</summary>
     public IReadOnlyList<HeaderEntry> Headers { get; init; } = [];
 
-    /// <summary>Decoded body, at most the configured cap. Empty when the body was discarded.</summary>
+    /// <summary>
+    /// Decoded body. When <see cref="SpoolPath"/> is set this is only the leading <see cref="ResponseSpool.SampleBytes"/> bytes
+    /// and the complete body is in the spool file.
+    /// </summary>
     public ReadOnlyMemory<byte> Body { get; init; }
+
+    /// <summary>Temporary file holding the complete decoded body, set only when the body was too large to keep in memory.</summary>
+    public string? SpoolPath { get; init; }
+
+    /// <summary>Size of the complete decoded body when it differs from <see cref="Body"/> (see <see cref="SpoolPath"/>).</summary>
+    public long? TotalBodyBytes { get; init; }
+
+    public bool IsBodyPartial => SpoolPath is not null;
+
+    public long BodyLength => TotalBodyBytes ?? Body.Length;
 
     public string? MediaType { get; init; }
     public long ElapsedMilliseconds { get; init; }
@@ -46,6 +59,8 @@ public enum ExecutionErrorKind
     Proxy,
     Timeout,
     Cancelled,
+
+    /// <summary>Legacy: responses no longer have a size limit. Kept so run history saved by older versions still loads.</summary>
     ResponseLimit,
     OtherTransport,
 }
@@ -53,7 +68,7 @@ public enum ExecutionErrorKind
 /// <summary>A structured failure with a message that is safe to show and store (no secrets, URLs or payloads).</summary>
 public sealed record ExecutionError(ExecutionErrorKind Kind, string Message)
 {
-    /// <summary>Header and timing metadata retained when only the body could not be used (e.g. ResponseLimit). Body is empty.</summary>
+    /// <summary>Header and timing metadata retained when only the body could not be used. Body is empty.</summary>
     public ResponseSnapshot? PartialResponse { get; init; }
 
     public long? ElapsedMilliseconds { get; init; }

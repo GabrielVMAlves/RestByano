@@ -150,7 +150,7 @@ public sealed partial class RunnerViewModel : ObservableObject
         try
         {
             var environment = await _environment.LoadActiveAsync(cancellation.Token);
-            var transport = TransportProfile.ForSend(_settings.Current.TimeoutSeconds, _settings.Current.ResponseLimitBytes, environment?.TransportProfile);
+            var transport = TransportProfile.ForSend(_settings.Current.TimeoutSeconds, environment?.TransportProfile);
 
             // Show the plan up front: ordinary requests in saved order, then cleanup.
             var ordered = CollectionLayout.ExecutionOrder(collection);

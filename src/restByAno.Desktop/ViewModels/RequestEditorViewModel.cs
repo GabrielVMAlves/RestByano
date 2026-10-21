@@ -335,7 +335,7 @@ public sealed partial class RequestEditorViewModel : ObservableObject
             var variables = await _variableSnapshots.BuildAsync(defaults, environment, null, cancellation.Token);
 
             // Settings and the environment's transport profile are read now: later changes apply to future sends only.
-            var transport = TransportProfile.ForSend(_settings.Current.TimeoutSeconds, _settings.Current.ResponseLimitBytes, environment?.TransportProfile);
+            var transport = TransportProfile.ForSend(_settings.Current.TimeoutSeconds, environment?.TransportProfile);
             var build = RequestBuilder.Build(snapshot, transport, variables);
             if (build.Request is null)
             {

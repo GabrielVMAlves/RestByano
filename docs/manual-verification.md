@@ -35,7 +35,7 @@ machine are listed at the end as **pending**.
 - `/customers/<random guid>` → `404 Not Found` is shown as a response; each new Send clears the previous response.
 - `/delay?ms=10000` then Cancel → status `Cancelled` within about a second; Send is disabled while sending; the fixture's
   `/delay-cancelled-count` increases. With timeout 1 s (Settings) → `Timed out`.
-- `/large?bytes=11534336` (above the 10 MiB cap) → `Response too large`, status and headers kept, no body. Same with
+- `/large?bytes=11534336` → status `200` with a banner "Large response (11.0 MiB): showing the first 1.0 MiB as a sample"; "Load full body" shows all of it, "Save body…" writes it to a file of the same size. `/large?bytes=50000000` (above the 32 MiB display limit) offers only "Save body…". Same with
   `&gzip=true` (small on the wire, large decoded). `/redirect` shows `302`; `/redirect-count` stays `0`.
 - `/text-latin1` shows `café crème`; `/text-unsupported-charset` shows a warning and UTF-8 text; `/binary` shows metadata only;
   `/invalid-json` shows the raw text and a warning on Pretty.

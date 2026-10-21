@@ -32,7 +32,15 @@ public sealed class ResponseBodyJson : IDisposable
 
     private void Parse()
     {
-        var decoded = ResponseTextDecoder.Decode(_response);
+        // A spooled body is only a sample in memory; rules need the complete document.
+        var response = ResponseSpool.TryLoadFull(_response, ResponseSpool.MaxEvaluationBytes);
+        if (response is null)
+        {
+            _failure = $"The response body is too large to evaluate (more than {ResponseSpool.MaxEvaluationBytes / (1024 * 1024)} MiB) or could not be read.";
+            return;
+        }
+
+        var decoded = ResponseTextDecoder.Decode(response);
         if (decoded.Kind == BodyDisplayKind.Empty)
         {
             _failure = "The response has no body.";

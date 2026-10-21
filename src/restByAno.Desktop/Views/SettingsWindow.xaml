@@ -21,22 +21,16 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Text="Request timeout (seconds)" VerticalAlignment="Center" Margin="0,0,0,8" />
                     <TextBox Grid.Column="1" Margin="0,0,0,8" Text="{Binding TimeoutSeconds, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="Request timeout seconds" />
                     <TextBlock Grid.Column="2" Text="1 – 600" Margin="10,0,0,8" VerticalAlignment="Center"
                                Foreground="{DynamicResource SecondaryTextBrush}" />
-                    <TextBlock Grid.Row="1" Text="Response size limit (KiB)" VerticalAlignment="Center" Margin="0,0,0,8" />
-                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding ResponseLimitKiB, UpdateSourceTrigger=PropertyChanged}"
-                             AutomationProperties.Name="Response size limit KiB" />
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="1 – 102,400 (default 10,240 = 10 MiB, decoded size)" Margin="10,0,0,8"
-                               VerticalAlignment="Center" Foreground="{DynamicResource SecondaryTextBrush}" />
-                    <TextBlock Grid.Row="2" Text="History retention (days)" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding RetentionDays, UpdateSourceTrigger=PropertyChanged}"
+                    <TextBlock Grid.Row="1" Text="History retention (days)" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding RetentionDays, UpdateSourceTrigger=PropertyChanged}"
                              AutomationProperties.Name="History retention days" />
-                    <TextBlock Grid.Row="2" Grid.Column="2" Text="1 – 3650" Margin="10,0,0,0" VerticalAlignment="Center"
+                    <TextBlock Grid.Row="1" Grid.Column="2" Text="1 – 3650" Margin="10,0,0,0" VerticalAlignment="Center"
                                Foreground="{DynamicResource SecondaryTextBrush}" />
                 </Grid>
 

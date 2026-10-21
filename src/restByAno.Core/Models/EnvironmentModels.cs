@@ -33,22 +33,19 @@ public sealed record VariableDefinition
 public sealed record TransportProfile
 {
     public const int DefaultTimeoutSeconds = 30;
-    public const int DefaultMaxResponseBytes = 10 * 1024 * 1024;
 
     public int TimeoutSeconds { get; init; } = DefaultTimeoutSeconds;
-    public int MaxResponseBytes { get; init; } = DefaultMaxResponseBytes;
     public ProxyMode ProxyMode { get; init; } = ProxyMode.System;
     public string? ProxyUri { get; init; }
     public bool AllowNonLoopbackHttp { get; init; }
 
     /// <summary>
-    /// The profile used for one send: timeout and response cap come from the app settings, proxy and the non-loopback-HTTP
+    /// The profile used for one send: timeout comes from the app settings, proxy and the non-loopback-HTTP
     /// switch from the active environment's profile (system proxy and HTTPS-only when no environment is active).
     /// </summary>
-    public static TransportProfile ForSend(int timeoutSeconds, int maxResponseBytes, TransportProfile? environmentProfile) => new()
+    public static TransportProfile ForSend(int timeoutSeconds, TransportProfile? environmentProfile) => new()
     {
         TimeoutSeconds = timeoutSeconds,
-        MaxResponseBytes = maxResponseBytes,
         ProxyMode = environmentProfile?.ProxyMode ?? ProxyMode.System,
         ProxyUri = environmentProfile?.ProxyUri,
         AllowNonLoopbackHttp = environmentProfile?.AllowNonLoopbackHttp ?? false,

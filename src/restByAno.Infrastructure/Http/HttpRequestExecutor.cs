@@ -8,7 +8,7 @@ namespace restByAno.Infrastructure.Http;
 
 /// <summary>
 /// Native HTTP transport. 4xx/5xx are valid responses; redirects, cookies, retries and integrated credentials are off;
-/// the decoded body is read incrementally against a hard cap; every failure is returned as a structured, secret-free error.
+/// the decoded body is read incrementally with no size limit (large bodies are spooled to a temp file); every failure is returned as a structured, secret-free error.
 /// </summary>
 public sealed class HttpRequestExecutor(HttpClientPool pool, ITargetPolicy targetPolicy) : IRequestExecutor
 {
@@ -59,21 +59,10 @@ public sealed class HttpRequestExecutor(HttpClientPool pool, ITargetPolicy targe
                 .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, linked.Token)
                 .ConfigureAwait(false);
 
-            var (body, withinLimit) = await ReadBoundedAsync(
-                response.Content, request.Transport.MaxResponseBytes, linked.Token).ConfigureAwait(false);
+            var body = await ReadBodyAsync(response.Content, linked.Token).ConfigureAwait(false);
             stopwatch.Stop();
 
-            var snapshot = Snapshot(response, withinLimit ? body : default, stopwatch.ElapsedMilliseconds);
-            if (withinLimit)
-                return ExecutionResult.FromResponse(snapshot);
-
-            return ExecutionResult.FromError(new ExecutionError(
-                ExecutionErrorKind.ResponseLimit,
-                $"The response body exceeded the {request.Transport.MaxResponseBytes}-byte limit and was discarded.")
-            {
-                PartialResponse = snapshot,
-                ElapsedMilliseconds = stopwatch.ElapsedMilliseconds,
-            });
+            return ExecutionResult.FromResponse(Snapshot(response, body, stopwatch.ElapsedMilliseconds));
         }
         catch (Exception ex) when (ex is OperationCanceledException or HttpRequestException or IOException
                                        or InvalidOperationException or NotSupportedException)
@@ -91,8 +80,6 @@ public sealed class HttpRequestExecutor(HttpClientPool pool, ITargetPolicy targe
             return "The request URL must be an absolute http or https URL.";
         if (request.Transport.TimeoutSeconds < 1)
             return "The timeout must be at least 1 second.";
-        if (request.Transport.MaxResponseBytes < 1)
-            return "The response size limit must be positive.";
         if (request.Transport.ProxyMode == ProxyMode.Explicit)
         {
             if (!Uri.TryCreate(request.Transport.ProxyUri, UriKind.Absolute, out var proxy)
@@ -203,29 +190,59 @@ public sealed class HttpRequestExecutor(HttpClientPool pool, ITargetPolicy targe
         _ => throw new ArgumentOutOfRangeException(nameof(method), method, null),
     };
 
-    /// <summary>Reads the decoded stream, at most <paramref name="limit"/> bytes plus a one-byte sentinel.</summary>
-    private static async Task<(ReadOnlyMemory<byte> Body, bool WithinLimit)> ReadBoundedAsync(
-        HttpContent content, int limit, CancellationToken cancellationToken)
+    private readonly record struct BodyRead(ReadOnlyMemory<byte> Body, long TotalBytes, string? SpoolPath);
+
+    /// <summary>
+    /// Reads the decoded stream to the end. The first <see cref="ResponseSpool.SampleBytes"/> bytes stay in memory; when the body
+    /// is larger, the whole body is also streamed to a spool file so memory use stays bounded.
+    /// </summary>
+    private static async Task<BodyRead> ReadBodyAsync(HttpContent content, CancellationToken cancellationToken)
     {
         await using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        using var buffer = new MemoryStream();
+        using var sample = new MemoryStream();
         var chunk = new byte[ReadBufferSize];
+        FileStream? spool = null;
+        string? spoolPath = null;
         long total = 0;
-        while (true)
+        try
         {
-            var wanted = (int)Math.Min(chunk.Length, (long)limit + 1 - total);
-            var read = await stream.ReadAsync(chunk.AsMemory(0, wanted), cancellationToken).ConfigureAwait(false);
-            if (read == 0) break;
-            total += read;
-            if (total > limit)
-                return (default, false); // sentinel byte seen: drop the incomplete body
-            buffer.Write(chunk, 0, read);
+            while (true)
+            {
+                var read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
+                if (read == 0) break;
+
+                if (spool is null && total + read > ResponseSpool.SampleBytes)
+                {
+                    // Everything read so far is still in the sample buffer: move it to the file and keep streaming there.
+                    spoolPath = ResponseSpool.NewPath();
+                    spool = new FileStream(spoolPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, ReadBufferSize, useAsync: true);
+                    await spool.WriteAsync(sample.GetBuffer().AsMemory(0, (int)sample.Length), cancellationToken).ConfigureAwait(false);
+                }
+
+                if (spool is not null)
+                    await spool.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+
+                var room = (int)Math.Min(read, ResponseSpool.SampleBytes - sample.Length);
+                if (room > 0)
+                    sample.Write(chunk, 0, room);
+                total += read;
+            }
+
+            if (spool is not null)
+                await spool.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            if (spool is not null) await spool.DisposeAsync().ConfigureAwait(false);
+            ResponseSpool.Delete(spoolPath);   // no response will reference this file
+            throw;
         }
 
-        return (new ReadOnlyMemory<byte>(buffer.GetBuffer(), 0, (int)buffer.Length), true);
+        if (spool is not null) await spool.DisposeAsync().ConfigureAwait(false);
+        return new BodyRead(new ReadOnlyMemory<byte>(sample.ToArray()), total, spoolPath);
     }
 
-    private static ResponseSnapshot Snapshot(HttpResponseMessage response, ReadOnlyMemory<byte> body, long elapsedMs)
+    private static ResponseSnapshot Snapshot(HttpResponseMessage response, BodyRead body, long elapsedMs)
     {
         var headers = new List<HeaderEntry>();
         foreach (var header in response.Headers)
@@ -240,7 +257,9 @@ public sealed class HttpRequestExecutor(HttpClientPool pool, ITargetPolicy targe
             StatusCode = (int)response.StatusCode,
             ReasonPhrase = response.ReasonPhrase,
             Headers = headers,
-            Body = body,
+            Body = body.Body,
+            SpoolPath = body.SpoolPath,
+            TotalBodyBytes = body.SpoolPath is null ? null : body.TotalBytes,
             MediaType = response.Content.Headers.ContentType?.MediaType,
             ElapsedMilliseconds = elapsedMs,
         };

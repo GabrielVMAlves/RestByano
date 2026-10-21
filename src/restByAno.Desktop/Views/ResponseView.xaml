@@ -60,8 +60,14 @@
                     </TextBlock>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Content="Load full body" Command="{Binding LoadFullBodyCommand}" Margin="0,0,6,0"
+                            Visibility="{Binding CanLoadFullBody, Converter={StaticResource BoolToVisibility}}"
+                            AutomationProperties.Name="Load full body" ToolTip="Load the rest of this large response into the viewer" />
+                    <Button Content="Save body…" Command="{Binding SaveBodyCommand}" Margin="0,0,6,0"
+                            Visibility="{Binding CanSaveBody, Converter={StaticResource BoolToVisibility}}"
+                            AutomationProperties.Name="Save body to file" ToolTip="Write the complete response body to a file" />
                     <Button Content="Copy body" Command="{Binding CopyBodyCommand}" Margin="0,0,6,0"
-                            AutomationProperties.Name="Copy body" ToolTip="Copy the full response body to the clipboard" />
+                            AutomationProperties.Name="Copy body" ToolTip="Copy the response body shown here to the clipboard" />
                     <Button Content="Clear" Command="{Binding ClearResponseCommand}"
                             AutomationProperties.Name="Clear response" ToolTip="Discard the displayed response" />
                 </StackPanel>

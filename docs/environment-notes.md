@@ -36,8 +36,8 @@ Exact resolved graphs are in each project's `packages.lock.json`. Licenses are t
 
 ## Transport settings (Step 11)
 
-- Request timeout (1–600 s, default 30), decoded response size limit (1 KiB–100 MiB, default 10 MiB) and history retention (1–3650 days, default 30) are global settings stored in `restByAno.settings.json`.
-- Proxy mode (system proxy by default, or an explicit http/https proxy address) and “Allow non-loopback HTTP” belong to the active environment's transport profile (File → Settings…). The per-environment `timeoutSeconds`/`maxResponseBytes` fields stored in an environment are not used for sending; the global settings are.
+- Request timeout (1–600 s, default 30) and history retention (1–3650 days, default 30) are global settings stored in `restByAno.settings.json`.
+- Proxy mode (system proxy by default, or an explicit http/https proxy address) and “Allow non-loopback HTTP” belong to the active environment's transport profile (File → Settings…). The per-environment `timeoutSeconds` field (and the obsolete `maxResponseBytes`) stored in an environment are not used for sending; the global settings are. Responses have no size limit.
 - A failing proxy is a failed request: restByAno never retries without the proxy. Redirects, cookies, retries and integrated Windows credentials are always off. Proxy credentials are not supported.
 - Changes apply to the next request; a request already in flight keeps the settings it started with.
 

@@ -46,6 +46,8 @@ public partial class App : Application
             return;
         }
 
+        ResponseSpool.CleanupStale();   // large-response temp files left behind by a crash
+
         // One instance per canonical data directory, held for the lifetime of the app.
         _instanceGuard = SingleInstanceGuard.TryAcquire(options!);
         if (_instanceGuard is null)
@@ -80,6 +82,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _services?.GetService<ResponseViewModel>()?.DiscardSpool();
         _services?.Dispose();
         _instanceGuard?.Dispose();
         base.OnExit(e);

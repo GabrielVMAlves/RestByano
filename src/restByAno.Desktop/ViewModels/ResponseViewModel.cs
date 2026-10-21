@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -23,12 +24,22 @@ public enum StatusTone
     Error,
 }
 
-public sealed partial class ResponseViewModel(IClipboardService clipboard) : ObservableObject
+public sealed partial class ResponseViewModel(IClipboardService clipboard, IDialogService dialogs) : ObservableObject
 {
-    /// <summary>Text controls get at most this many characters; Copy still uses the full body.</summary>
-    private const int DisplayCharLimit = 2_000_000;
+    /// <summary>Safety net for the text controls; sized above <see cref="ResponseSpool.MaxDisplayBytes"/> so a loaded body is shown whole.</summary>
+    private const int DisplayCharLimit = 40_000_000;
 
     private string _fullRaw = string.Empty;
+    private ResponseSnapshot? _response;     // the response being shown; its spool file lives until Clear
+    private string _baseBanner = string.Empty;
+
+    /// <summary>True while only a sample of a large body is shown and the rest can be loaded.</summary>
+    [ObservableProperty]
+    private bool _canLoadFullBody;
+
+    /// <summary>True while the complete body sits in a temporary file that can be saved.</summary>
+    [ObservableProperty]
+    private bool _canSaveBody;
 
     [ObservableProperty]
     private string _statusGlyph = "○";
@@ -151,6 +162,11 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
     /// <summary>Drops the previous response so a failure can never look like the previous success.</summary>
     public void Clear()
     {
+        DiscardSpool();
+        _response = null;
+        _baseBanner = string.Empty;
+        CanLoadFullBody = false;
+        CanSaveBody = false;
         _fullRaw = string.Empty;
         StatusGlyph = "○";
         StatusText = "No response yet";
@@ -165,6 +181,9 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         ChecksText = string.Empty;
         ChecksTone = StatusTone.None;
     }
+
+    /// <summary>Deletes the temporary file behind a large body, if any. Safe to call repeatedly.</summary>
+    public void DiscardSpool() => ResponseSpool.Delete(_response?.SpoolPath);
 
     public void BeginSending()
     {
@@ -205,7 +224,6 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         var (glyph, tone) = error.Kind switch
         {
             ExecutionErrorKind.Cancelled => ("⊘", StatusTone.Info),
-            ExecutionErrorKind.ResponseLimit => ("⚠", StatusTone.Warning),
             _ => ("✖", StatusTone.Error),
         };
 
@@ -234,14 +252,22 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         StatusGlyph = glyph;
         Tone = tone;
         StatusText = $"{response.StatusCode} {response.ReasonPhrase ?? HumanizeStatus(response.StatusCode)}".TrimEnd();
-        MetricsText = $"{response.ElapsedMilliseconds} ms · {response.Body.Length:N0} bytes";
+        MetricsText = $"{response.ElapsedMilliseconds} ms · {response.BodyLength:N0} bytes";
 
         foreach (var header in response.Headers)
             Headers.Add(header);
 
+        _response = response;
+        CanSaveBody = response.IsBodyPartial;
+        CanLoadFullBody = response.IsBodyPartial && response.BodyLength <= ResponseSpool.MaxDisplayBytes;
+
         // Decoding and pretty-printing can be heavy for large bodies; keep it off the UI thread.
         var shown = await Task.Run(() => PrepareBody(response));
+        ApplyBody(response, shown, banner, tone);
+    }
 
+    private void ApplyBody(ResponseSnapshot response, PreparedBody shown, string? banner, StatusTone tone)
+    {
         _fullRaw = shown.FullRaw;
         RawText = Limit(shown.FullRaw);
         PrettyText = Limit(shown.Pretty);
@@ -250,13 +276,29 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         var notes = new List<string>();
         if (banner is not null) notes.Add(banner);
         notes.AddRange(shown.Notes);
+        if (response.IsBodyPartial)
+        {
+            var size = FormatSize(response.BodyLength);
+            var sample = FormatSize(response.Body.Length);
+            notes.Add(CanLoadFullBody
+                ? $"Large response ({size}): showing the first {sample} as a sample. Use “Load full body” to load the rest, or “Save body…” to write it to a file."
+                : $"Very large response ({size}): showing the first {sample} as a sample. It is too large to display in full; use “Save body…” to write it to a file.");
+            notes.Add("Copy body copies the sample shown. JSON assertions and extractions use the complete body.");
+        }
+
         if (shown.FullRaw.Length > DisplayCharLimit || shown.Pretty.Length > DisplayCharLimit)
             notes.Add($"Only the first {DisplayCharLimit:N0} characters are displayed. Copy body copies everything.");
-        SetBanner(notes.Count == 0 ? null : string.Join(Environment.NewLine, notes), tone == StatusTone.Error ? "✖" : "⚠");
+
+        _baseBanner = string.Join(Environment.NewLine, notes);
+        SetBanner(notes.Count == 0 ? null : _baseBanner, tone == StatusTone.Error ? "✖" : "⚠");
     }
 
     private static PreparedBody PrepareBody(ResponseSnapshot response)
     {
+        // A sample cut inside a multi-byte character would otherwise decode as garbage (or as "binary" without a media type).
+        if (response.IsBodyPartial)
+            response = response with { Body = TrimIncompleteUtf8Tail(response.Body) };
+
         var decoded = ResponseTextDecoder.Decode(response);
         var notes = new List<string>();
         if (decoded.Warning is not null) notes.Add(decoded.Warning);
@@ -264,7 +306,7 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         switch (decoded.Kind)
         {
             case BodyDisplayKind.Binary:
-                notes.Add($"Binary content ({response.Body.Length:N0} bytes, {response.MediaType ?? "unknown type"}). The body is not displayed.");
+                notes.Add($"Binary content ({response.BodyLength:N0} bytes, {response.MediaType ?? "unknown type"}). The body is not displayed.");
                 return new PreparedBody(string.Empty, string.Empty, notes);
             case BodyDisplayKind.Empty:
                 return new PreparedBody(string.Empty, string.Empty, notes);
@@ -272,7 +314,8 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
 
         var pretty = decoded.Text;
         var looksJson = ResponseTextDecoder.IsJsonMediaType(response.MediaType);
-        if (looksJson || (response.MediaType is null && LooksLikeJson(decoded.Text)))
+        // A cut-off sample is never valid JSON; leave it as it is instead of reporting a misleading error.
+        if (!response.IsBodyPartial && (looksJson || (response.MediaType is null && LooksLikeJson(decoded.Text))))
         {
             if (JsonText.TryFormat(decoded.Text, out var formatted, out var error))
                 pretty = formatted;
@@ -282,6 +325,29 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
 
         return new PreparedBody(decoded.Text, pretty, notes);
     }
+
+    /// <summary>Drops a trailing, incomplete UTF-8 sequence (at most 3 bytes) so a cut-off sample decodes cleanly.</summary>
+    private static ReadOnlyMemory<byte> TrimIncompleteUtf8Tail(ReadOnlyMemory<byte> body)
+    {
+        var span = body.Span;
+        for (var back = 1; back <= Math.Min(3, span.Length); back++)
+        {
+            var b = span[^back];
+            if ((b & 0xC0) == 0x80) continue;                         // continuation byte: keep looking for its lead byte
+            var needed = b >= 0xF0 ? 4 : b >= 0xE0 ? 3 : b >= 0xC0 ? 2 : 1;
+            return needed > back ? body[..^back] : body;              // lead byte without all of its continuation bytes
+        }
+
+        return body;
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        >= 1024L * 1024 * 1024 => $"{bytes / (1024.0 * 1024 * 1024):N1} GiB",
+        >= 1024 * 1024 => $"{bytes / (1024.0 * 1024):N1} MiB",
+        >= 1024 => $"{bytes / 1024.0:N1} KiB",
+        _ => $"{bytes:N0} bytes",
+    };
 
     private static bool LooksLikeJson(string text)
     {
@@ -307,7 +373,7 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
         ExecutionErrorKind.Proxy => "Proxy failed",
         ExecutionErrorKind.Timeout => "Timed out",
         ExecutionErrorKind.Cancelled => "Cancelled",
-        ExecutionErrorKind.ResponseLimit => "Response too large",
+        ExecutionErrorKind.ResponseLimit => "Response too large",   // legacy kind from older run history
         _ => "Transport failed",
     };
 
@@ -328,6 +394,64 @@ public sealed partial class ResponseViewModel(IClipboardService clipboard) : Obs
 
     [RelayCommand]
     private void ClearResponse() => Clear();
+
+    [RelayCommand]
+    private async Task LoadFullBodyAsync()
+    {
+        if (_response is not { IsBodyPartial: true } partial || !CanLoadFullBody) return;
+
+        CanLoadFullBody = false;   // one load at a time; restored below if it fails
+        SetBanner("Loading the full body…", "…");
+        var full = await Task.Run(() => ResponseSpool.TryLoadFull(partial, ResponseSpool.MaxDisplayBytes));
+        if (full is null)
+        {
+            CanLoadFullBody = true;
+            SetBanner($"The full body could not be loaded; the temporary file may be gone. {_baseBanner}", "⚠");
+            return;
+        }
+
+        // The spool file stays (it is still needed by Save body…); only the displayed text changes.
+        _response = partial with { Body = full.Body };
+        var shown = await Task.Run(() => PrepareBody(full));
+        ApplyBody(full, shown, banner: null, Tone);
+        CanSaveBody = true;
+    }
+
+    [RelayCommand]
+    private async Task SaveBodyAsync()
+    {
+        if (_response is not { SpoolPath: { } source } response) return;
+        if (!File.Exists(source))
+        {
+            SetBanner($"The temporary copy of the body is no longer available. {_baseBanner}", "⚠");
+            return;
+        }
+
+        var extension = SuggestExtension(response.MediaType);
+        var target = dialogs.PickSaveFile("Save response body", $"Response body (*{extension})|*{extension}|All files (*.*)|*.*", $"response{extension}");
+        if (target is null) return;
+
+        try
+        {
+            await Task.Run(() => File.Copy(source, target, overwrite: true));
+            SetBanner($"{_baseBanner}{Environment.NewLine}Saved {FormatSize(response.BodyLength)} to {target}", "✔");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SetBanner($"The body could not be saved ({ex.GetType().Name}). Choose another location. {_baseBanner}", "⚠");
+        }
+    }
+
+    private static string SuggestExtension(string? mediaType) => mediaType switch
+    {
+        null => ".bin",
+        _ when ResponseTextDecoder.IsJsonMediaType(mediaType) => ".json",
+        _ when mediaType.EndsWith("xml", StringComparison.OrdinalIgnoreCase) => ".xml",
+        _ when mediaType.Equals("text/html", StringComparison.OrdinalIgnoreCase) => ".html",
+        _ when mediaType.Equals("text/csv", StringComparison.OrdinalIgnoreCase) => ".csv",
+        _ when mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) => ".txt",
+        _ => ".bin",
+    };
 
     private sealed record PreparedBody(string FullRaw, string Pretty, IReadOnlyList<string> Notes);
 }

@@ -135,7 +135,7 @@ public sealed class CollectionRunner(IRequestExecutor executor, VariableSnapshot
             Outcome = outcome,
             StatusCode = (response ?? error?.PartialResponse)?.StatusCode,
             ElapsedMilliseconds = response?.ElapsedMilliseconds ?? error?.ElapsedMilliseconds,
-            BodyBytes = response?.Body.Length,
+            BodyBytes = response?.BodyLength,
             ErrorKind = error?.Kind,
             Message = message is null ? null : redaction.Redact(message),
             HadNoAssertions = request.Assertions.Count == 0,
@@ -163,7 +163,16 @@ public sealed class CollectionRunner(IRequestExecutor executor, VariableSnapshot
             }
 
             // No response means no assertions; an HTTP error status is still a response and its assertions run.
-            var check = StepChecker.Check(request, response, redaction);
+            StepCheckResult check;
+            try
+            {
+                check = StepChecker.Check(request, response, redaction);
+            }
+            finally
+            {
+                ResponseSpool.Delete(response.SpoolPath);   // the run keeps no bodies, so a spooled one ends with its step
+            }
+
             if (check.Outcome == StepOutcome.Passed && check.Extraction is { Succeeded: true } extraction)
             {
                 foreach (var (name, value) in extraction.Values)

@@ -22,7 +22,7 @@ This document is an implementation prompt and ordered build specification. Creat
 - Dark theme on first launch; no light-theme toggle required. Respect Windows high contrast.
 - Do not store plaintext tokens/passwords in saved auth configuration. Use DPAPI CurrentUser and secret references.
 - Preserve certificate validation. No automatic redirects, retries or cookies in MVP.
-- Default full-operation timeout: 30 seconds. Default decoded response cap: 10 MiB.
+- Default full-operation timeout: 30 seconds. There is no response size limit: bodies over 1 MiB keep a 1 MiB sample in memory and are streamed to a temp file.
 - Never modify/delete unrelated C:\temp files. Never replace a corrupt/newer database with an empty one automatically.
 
 ## How to execute every step
@@ -116,7 +116,7 @@ AuthDefinition:
 EnvironmentDefinition: Id, Name, Variables[], TransportProfile
 VariableDefinition: Name, Value?, SecretId?   [exactly one populated]
 TransportProfile:
-  TimeoutSeconds=30, MaxResponseBytes=10485760,
+  TimeoutSeconds=30,
   ProxyMode(System|Explicit), ProxyUri?, AllowNonLoopbackHttp=false
 AssertionDefinition:
   Id, Kind(StatusEquals|HeaderEquals|JsonExists|JsonEquals|DurationBelow),
@@ -170,7 +170,7 @@ Create Http/HttpRequestExecutor.cs and Http/HttpClientPool.cs.
 - Use SendAsync with ResponseHeadersRead. Never use EnsureSuccessStatusCode: 4xx/5xx are valid response data.
 - Start elapsed timing immediately before sending; stop after the bounded response read.
 - Use a linked cancellation token for the whole send/read timeout. Differentiate user cancellation from timeout.
-- Read the decoded stream incrementally, at most the limit plus one sentinel byte. A limit violation discards incomplete body data and returns ResponseLimit. Header/timing metadata may be retained, but body-dependent rules cannot execute.
+- Read the decoded stream incrementally with no size limit. The first 1 MiB stays in memory (`ResponseSnapshot.Body`); a larger body is also streamed to a temp file (`SpoolPath`, `TotalBodyBytes`). The UI shows the sample and offers "Load full body" (up to 32 MiB) and "Save body…". JSON assertions/extractors read the complete body from the file (up to 256 MiB; above that they fail with a readable reason). Spool files are deleted when the response is cleared, a run step ends, or the app exits; stale ones are removed at startup. `ResponseLimit` is a legacy error kind kept only so old run history loads.
 - Dispose messages/responses/streams. Do not dispose a shared client after each request.
 - No bypass of invalid certificates, proxy failures or target-policy denial.
 - Validate resolved target immediately before any send, even when called outside the UI.

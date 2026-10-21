@@ -183,7 +183,7 @@ DPAPI CurrentUser ciphertext is machine/user-context dependent; moving a collect
 - Automatic redirects are off initially. Show the redirect status and Location value. A later redirect implementation must revalidate every destination and prevent secret headers/cookies from crossing origins.
 - No automatic retries: repeated POST/DELETE requests may change server state. User-triggered reruns are explicit.
 - Default timeout: 30 seconds for the complete request/body-read operation, configurable within a validated range.
-- Default decoded response limit: 10 MiB. Stream reading enforces the limit even without Content-Length or with compressed bodies. Exceeding it produces a visible limit error and skips body-dependent assertions/extraction.
+- No response size limit. Stream reading keeps a 1 MiB sample in memory and spools larger decoded bodies (also compressed or chunked ones) to a temp file; the UI shows the sample with options to load the rest or save it to a file.
 - Render response bodies as plain text; do not execute HTML, resolve external images, or navigate links automatically.
 - Windows authentication must be enabled only for an approved host scope; credentials must not be offered to arbitrary imported targets.
 
